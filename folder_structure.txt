@@ -1,0 +1,34 @@
+expense_tracker/
+├── lib/
+│   ├── main.dart
+│   ├── app.dart
+│   │
+│   ├── core/
+│   │   ├── constants/
+│   │   │   └── app_constants.dart      ✅ Hive box names, routes, settings keys
+│   │   ├── theme/
+│   │   │   ├── app_theme.dart          ✅ ThemeData Tokyo Night
+│   │   │   ├── app_colors.dart         ✅ Semua konstanta warna
+│   │   │   └── app_text_styles.dart    ✅ JetBrainsMono text styles
+│   │   ├── router/
+│   │   │   └── app_router.dart         ✅ GoRouter + MainShell (bottom nav)
+│   │   └── utils/
+│   │       └── currency_formatter.dart ✅ Format Rp Indonesia
+│   │
+│   ├── features/
+│   │   ├── transaction/        ← Step 2-5
+│   │   ├── category/           ← Step 2
+│   │   ├── analytics/          ← Step 6
+│   │   ├── export/             ← Step 7
+│   │   └── profile/            ← Step 8
+│   │
+│   └── injection_container.dart  ← Step 3 (get_it setup)
+│
+├── assets/
+│   ├── fonts/
+│   │   ├── JetBrainsMono-Regular.ttf
+│   │   ├── JetBrainsMono-Medium.ttf
+│   │   └── JetBrainsMono-Bold.ttf
+│   └── icons/
+│
+└── pubspec.yaml                    ✅ Semua dependencies
