@@ -2,6 +2,7 @@ import 'package:expense_tracker/core/constants/app_constants.dart';
 import 'package:expense_tracker/core/theme/app_colors.dart';
 import 'package:expense_tracker/core/theme/app_text_styles.dart';
 import 'package:expense_tracker/features/transaction/domain/entities/transaction.dart';
+import 'package:expense_tracker/features/transaction/presentation/widgets/common/empty_states.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -27,14 +28,14 @@ class GroupedTxList extends ConsumerWidget {
       error: (e, _) => SliverToBoxAdapter(
           child: Center(child: Text('$e', style: AppTextStyles.labelMedium))),
       data: (list) {
-        if (list.isEmpty)
-          return const SliverToBoxAdapter(child: _EmptyHistory());
+        // ← EMPTY STATE
+        if (list.isEmpty) {
+          return const SliverToBoxAdapter(child: EmptyHistory());
+        }
 
-        // Group by date
         final groups = <String, List<Transaction>>{};
         for (final tx in list) {
-          final key = _dateKey(tx.date);
-          groups.putIfAbsent(key, () => []).add(tx);
+          groups.putIfAbsent(_dateKey(tx.date), () => []).add(tx);
         }
         final keys = groups.keys.toList();
 
@@ -48,7 +49,6 @@ class GroupedTxList extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Date header
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       child: Row(children: [
@@ -62,13 +62,12 @@ class GroupedTxList extends ConsumerWidget {
                         const Expanded(child: Divider()),
                       ]),
                     ),
-                    // Transactions
                     ...items.map((tx) => Padding(
                           padding: const EdgeInsets.only(bottom: 10),
                           child: TransactionCard(
                             transaction: tx,
                             onTap: () =>
-                                context.go(AppConstants.navEditTx, extra: tx),
+                                context.push(AppConstants.navEditTx, extra: tx),
                             onLongPress: () => _confirmSettle(context, ref, tx),
                           ),
                         )),
@@ -95,24 +94,24 @@ class GroupedTxList extends ConsumerWidget {
 
   String _fmt(DateTime d) {
     const m = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec'
+      'JAN',
+      'FEB',
+      'MAR',
+      'APR',
+      'MAY',
+      'JUN',
+      'JUL',
+      'AUG',
+      'SEP',
+      'OCT',
+      'NOV',
+      'DEC'
     ];
-    return '${m[d.month - 1].toUpperCase()} ${d.day}';
+    return '${m[d.month - 1]} ${d.day}';
   }
 
   void _confirmSettle(BuildContext context, WidgetRef ref, Transaction tx) {
-    if (tx.status.index == 1) return; // sudah settled
+    if (tx.status.index == 1) return;
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.bgOverlay,
@@ -152,20 +151,4 @@ class GroupedTxList extends ConsumerWidget {
       ),
     );
   }
-}
-
-class _EmptyHistory extends StatelessWidget {
-  const _EmptyHistory();
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 80),
-        child: Column(children: [
-          const Icon(Icons.history_outlined,
-              size: 48, color: AppColors.textDim),
-          const SizedBox(height: 12),
-          Text('No transactions found',
-              style: AppTextStyles.bodyMedium
-                  .copyWith(color: AppColors.textMuted)),
-        ]),
-      );
 }

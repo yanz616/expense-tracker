@@ -1,3 +1,4 @@
+import 'package:expense_tracker/core/constants/app_constants.dart';
 import 'package:expense_tracker/features/transaction/domain/entities/category.dart';
 import 'package:expense_tracker/features/transaction/domain/entities/transaction.dart';
 import 'package:expense_tracker/features/transaction/domain/entities/transaction_status.dart';
@@ -14,7 +15,6 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../providers/transaction_provider.dart';
 
 class AddTransactionScreen extends ConsumerStatefulWidget {
-  /// Jika tidak null = mode edit
   final Transaction? existing;
   const AddTransactionScreen({super.key, this.existing});
 
@@ -56,6 +56,15 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     super.dispose();
   }
 
+  /// ← FIX utama: selalu aman di-pop
+  void _safeClose() {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go(AppConstants.navDashboard);
+    }
+  }
+
   Future<void> _save() async {
     if (_amount <= 0) {
       _showSnack('Please enter an amount');
@@ -86,14 +95,12 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         createdAt: _isEdit ? widget.existing!.createdAt : DateTime.now(),
         updatedAt: _isEdit ? DateTime.now() : null,
       );
-
       if (_isEdit) {
         await actions.update(tx);
       } else {
         await actions.add(tx);
       }
-
-      if (mounted) context.pop();
+      if (mounted) _safeClose(); // ← pakai _safeClose
     } catch (e) {
       _showSnack('Error: $e');
     } finally {
@@ -107,9 +114,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       builder: (_) => AlertDialog(
         backgroundColor: AppColors.bgOverlay,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        title:
-            const Text('Delete transaction?', style: AppTextStyles.bodyLarge),
-        content: const Text('This action cannot be undone.',
+        title: Text('Delete transaction?', style: AppTextStyles.bodyLarge),
+        content: Text('This action cannot be undone.',
             style: AppTextStyles.labelMedium),
         actions: [
           TextButton(
@@ -128,7 +134,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     );
     if (confirm == true && mounted) {
       await ref.read(transactionActionsProvider).delete(widget.existing!.id);
-      if (mounted) context.pop();
+      if (mounted) _safeClose(); // ← pakai _safeClose
     }
   }
 
@@ -165,7 +171,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       backgroundColor: AppColors.bgSurface,
       appBar: AppBar(
         backgroundColor: AppColors.bgSurface,
-        leading: const SizedBox.shrink(),
+        automaticallyImplyLeading: false,
         title: Row(children: [
           const Icon(Icons.terminal, size: 14, color: AppColors.blue),
           const SizedBox(width: 8),
@@ -184,7 +190,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
             ),
           IconButton(
             icon: const Icon(Icons.close, color: AppColors.textMuted, size: 22),
-            onPressed: () => context.pop(),
+            onPressed: _safeClose, // ← pakai _safeClose
           ),
         ],
       ),
@@ -193,15 +199,12 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Amount
             AmountInput(
               initialValue: _amount,
               onChanged: (v) => setState(() => _amount = v),
             ),
             const SizedBox(height: 20),
-
-            // Title
-            const Text('TITLE', style: AppTextStyles.headingMedium),
+            Text('TITLE', style: AppTextStyles.headingMedium),
             const SizedBox(height: 10),
             TextField(
               controller: _titleCtrl,
@@ -211,25 +214,19 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                   hintText: 'e.g. Makan siang, Gaji, Netflix...'),
             ),
             const SizedBox(height: 20),
-
-            // Type toggle
             TypeToggle(
               selected: _type,
               onChanged: (t) => setState(() => _type = t),
             ),
             const SizedBox(height: 24),
-
-            // Category
-            const Text('SELECT_CATEGORY', style: AppTextStyles.headingMedium),
+            Text('SELECT_CATEGORY', style: AppTextStyles.headingMedium),
             const SizedBox(height: 14),
             CategoryGrid(
               selectedId: _categoryId,
               onSelected: (Category c) => setState(() => _categoryId = c.id),
             ),
             const SizedBox(height: 24),
-
-            // Date
-            const Text('DATE_TIME', style: AppTextStyles.headingMedium),
+            Text('DATE_TIME', style: AppTextStyles.headingMedium),
             const SizedBox(height: 10),
             GestureDetector(
               onTap: _pickDate,
@@ -257,9 +254,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
               ),
             ),
             const SizedBox(height: 20),
-
-            // Status (Pending / Settled)
-            const Text('STATUS', style: AppTextStyles.headingMedium),
+            Text('STATUS', style: AppTextStyles.headingMedium),
             const SizedBox(height: 10),
             Row(
               children: TransactionStatus.values.map((s) {
@@ -298,9 +293,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
               }).toList(),
             ),
             const SizedBox(height: 20),
-
-            // Description
-            const Text('DESCRIPTION', style: AppTextStyles.headingMedium),
+            Text('DESCRIPTION', style: AppTextStyles.headingMedium),
             const SizedBox(height: 10),
             TextField(
               controller: _descCtrl,
@@ -310,8 +303,6 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
               decoration: const InputDecoration(hintText: 'Add a note...'),
             ),
             const SizedBox(height: 32),
-
-            // Save button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(

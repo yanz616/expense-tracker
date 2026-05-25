@@ -2,6 +2,7 @@ import 'package:expense_tracker/features/transaction/domain/usecases/transaction
 import 'package:expense_tracker/features/transaction/presentation/widgets/analytics/category_breakdown.dart';
 import 'package:expense_tracker/features/transaction/presentation/widgets/analytics/donut_chart.dart';
 import 'package:expense_tracker/features/transaction/presentation/widgets/analytics/month_filter.dart';
+import 'package:expense_tracker/features/transaction/presentation/widgets/common/empty_states.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -10,20 +11,16 @@ import '../../../../injection_container.dart';
 import '../providers/category_provider.dart';
 import '../widgets/common/app_bar_widget.dart';
 
-// Provider khusus untuk filter bulan di analytics
 final analyticsMonthProvider = StateProvider<int>((_) => DateTime.now().month);
 final analyticsYearProvider = StateProvider<int>((_) => DateTime.now().year);
 
 final analyticsDataProvider = FutureProvider.autoDispose((ref) async {
   final month = ref.watch(analyticsMonthProvider);
   final year = ref.watch(analyticsYearProvider);
-
   final from = DateTime(year, month, 1);
-  final to = DateTime(year, month + 1, 0); // last day of month
-
+  final to = DateTime(year, month + 1, 0);
   final txList = await sl<GetTransactionsByDateRange>().call(from, to);
-  final summary = sl<GetSpendingSummary>().call(txList);
-  return summary;
+  return sl<GetSpendingSummary>().call(txList);
 });
 
 class AnalyticsScreen extends ConsumerWidget {
@@ -44,7 +41,6 @@ class AnalyticsScreen extends ConsumerWidget {
                 color: AppColors.textMuted, size: 22),
             onPressed: () {},
           ),
-          // Avatar placeholder
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: CircleAvatar(
@@ -58,7 +54,6 @@ class AnalyticsScreen extends ConsumerWidget {
       ),
       body: CustomScrollView(
         slivers: [
-          // Title
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
@@ -76,7 +71,6 @@ class AnalyticsScreen extends ConsumerWidget {
           ),
           const SliverToBoxAdapter(child: SizedBox(height: 16)),
 
-          // Month filter
           SliverToBoxAdapter(
             child: MonthFilter(
               selectedMonth: month,
@@ -87,74 +81,78 @@ class AnalyticsScreen extends ConsumerWidget {
           ),
           const SliverToBoxAdapter(child: SizedBox(height: 20)),
 
-          // Donut chart + total
+          // Chart atau empty state
           SliverToBoxAdapter(
             child: dataAsync.when(
               loading: () => const SizedBox(
-                height: 260,
-                child: Center(
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2, color: AppColors.blue)),
-              ),
+                  height: 260,
+                  child: Center(
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: AppColors.blue))),
               error: (e, _) =>
                   Center(child: Text('$e', style: AppTextStyles.labelMedium)),
-              data: (summary) => catAsync.when(
-                loading: () => const SizedBox(height: 260),
-                error: (_, __) => const SizedBox(height: 260),
-                data: (cats) => DonutChart(
-                  summary: summary,
-                  categories: cats,
-                ),
-              ),
+              data: (summary) {
+                // ← EMPTY STATE jika tidak ada data bulan ini
+                if (summary.totalSpent == 0 && summary.totalIncome == 0) {
+                  return const EmptyAnalytics();
+                }
+                return catAsync.when(
+                  loading: () => const SizedBox(height: 260),
+                  error: (_, __) => const SizedBox(height: 260),
+                  data: (cats) =>
+                      DonutChart(summary: summary, categories: cats),
+                );
+              },
             ),
           ),
           const SliverToBoxAdapter(child: SizedBox(height: 16)),
 
-          // Income / expense summary row
+          // Stat chips
           SliverToBoxAdapter(
             child: dataAsync.maybeWhen(
-              data: (summary) => Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-                child: Row(children: [
-                  _StatChip(
-                    label: 'INCOME',
-                    amount: summary.totalIncome,
-                    color: AppColors.income,
-                    icon: Icons.arrow_downward_rounded,
-                  ),
-                  const SizedBox(width: 10),
-                  _StatChip(
-                    label: 'EXPENSE',
-                    amount: summary.totalExpense,
-                    color: AppColors.expense,
-                    icon: Icons.arrow_upward_rounded,
-                  ),
-                  const SizedBox(width: 10),
-                  _StatChip(
-                    label: 'SUBS',
-                    amount: summary.totalSubscription,
-                    color: AppColors.purple,
-                    icon: Icons.repeat_rounded,
-                  ),
-                ]),
-              ),
+              data: (summary) {
+                if (summary.totalSpent == 0 && summary.totalIncome == 0)
+                  return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                  child: Row(children: [
+                    _StatChip(
+                        label: 'INCOME',
+                        amount: summary.totalIncome,
+                        color: AppColors.income,
+                        icon: Icons.arrow_downward_rounded),
+                    const SizedBox(width: 10),
+                    _StatChip(
+                        label: 'EXPENSE',
+                        amount: summary.totalExpense,
+                        color: AppColors.expense,
+                        icon: Icons.arrow_upward_rounded),
+                    const SizedBox(width: 10),
+                    _StatChip(
+                        label: 'SUBS',
+                        amount: summary.totalSubscription,
+                        color: AppColors.purple,
+                        icon: Icons.repeat_rounded),
+                  ]),
+                );
+              },
               orElse: () => const SizedBox.shrink(),
             ),
           ),
 
           // Category breakdown
           SliverToBoxAdapter(
-            child: dataAsync.when(
-              loading: () => const SizedBox.shrink(),
-              error: (_, __) => const SizedBox.shrink(),
-              data: (summary) => catAsync.when(
-                loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
-                data: (cats) => CategoryBreakdown(
-                  summary: summary,
-                  categories: cats,
-                ),
-              ),
+            child: dataAsync.maybeWhen(
+              data: (summary) {
+                if (summary.totalSpent == 0 && summary.totalIncome == 0)
+                  return const SizedBox.shrink();
+                return catAsync.maybeWhen(
+                  data: (cats) =>
+                      CategoryBreakdown(summary: summary, categories: cats),
+                  orElse: () => const SizedBox.shrink(),
+                );
+              },
+              orElse: () => const SizedBox.shrink(),
             ),
           ),
 
@@ -170,13 +168,11 @@ class _StatChip extends StatelessWidget {
   final double amount;
   final Color color;
   final IconData icon;
-
-  const _StatChip({
-    required this.label,
-    required this.amount,
-    required this.color,
-    required this.icon,
-  });
+  const _StatChip(
+      {required this.label,
+      required this.amount,
+      required this.color,
+      required this.icon});
 
   @override
   Widget build(BuildContext context) {
@@ -188,25 +184,20 @@ class _StatChip extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: color.withOpacity(0.3)),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(children: [
-              Icon(icon, size: 11, color: color),
-              const SizedBox(width: 4),
-              Text(label,
-                  style: AppTextStyles.labelSmall
-                      .copyWith(color: color, fontSize: 9)),
-            ]),
-            const SizedBox(height: 4),
-            Text(
-              amount > 0 ? _compact(amount) : 'Rp 0',
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Icon(icon, size: 11, color: color),
+            const SizedBox(width: 4),
+            Text(label,
+                style: AppTextStyles.labelSmall
+                    .copyWith(color: color, fontSize: 9)),
+          ]),
+          const SizedBox(height: 4),
+          Text(_compact(amount),
               style: AppTextStyles.labelMedium
                   .copyWith(color: color, fontWeight: FontWeight.w700),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
+              overflow: TextOverflow.ellipsis),
+        ]),
       ),
     );
   }

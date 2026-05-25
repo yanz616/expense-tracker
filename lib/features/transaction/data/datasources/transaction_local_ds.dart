@@ -11,7 +11,7 @@ class TransactionLocalDataSource {
 
   List<Transaction> getAll() {
     return _box.values.map((m) => m.toEntity()).toList()
-      ..sort((a, b) => b.date.compareTo(a.date)); // terbaru dulu
+      ..sort((a, b) => b.date.compareTo(a.date));
   }
 
   List<Transaction> getByType(TransactionType type) =>
@@ -35,10 +35,8 @@ class TransactionLocalDataSource {
   Future<void> add(Transaction tx) =>
       _box.put(tx.id, TransactionModel.fromEntity(tx));
 
-  Future<void> update(Transaction tx) {
-    final model = TransactionModel.fromEntity(tx);
-    return _box.put(tx.id, model);
-  }
+  Future<void> update(Transaction tx) =>
+      _box.put(tx.id, TransactionModel.fromEntity(tx));
 
   Future<void> delete(String id) => _box.delete(id);
 
@@ -51,6 +49,11 @@ class TransactionLocalDataSource {
 
   Future<void> clearAll() => _box.clear();
 
-  /// Stream reaktif — UI rebuild otomatis saat data berubah
-  Stream<List<Transaction>> watchAll() => _box.watch().map((_) => getAll());
+  /// FIX: yield nilai awal dulu sebelum listen perubahan
+  Stream<List<Transaction>> watchAll() async* {
+    yield getAll(); // emit langsung nilai saat ini
+    await for (final _ in _box.watch()) {
+      yield getAll();
+    }
+  }
 }

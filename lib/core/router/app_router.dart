@@ -44,26 +44,33 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
         ],
       ),
+
+      // ← pakai MaterialPage agar masuk navigation stack
       GoRoute(
         path: AppConstants.navAddTx,
         pageBuilder: (_, __) => CustomTransitionPage(
           child: const AddTransactionScreen(),
           transitionsBuilder: (_, anim, __, child) => SlideTransition(
-            position: Tween(begin: const Offset(0, 1), end: Offset.zero)
-                .animate(
-                    CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
+            position: Tween(
+              begin: const Offset(0, 1),
+              end: Offset.zero,
+            ).animate(
+                CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
             child: child,
           ),
         ),
       ),
+
       GoRoute(
         path: AppConstants.navEditTx,
         pageBuilder: (_, state) => CustomTransitionPage(
           child: AddTransactionScreen(existing: state.extra as Transaction?),
           transitionsBuilder: (_, anim, __, child) => SlideTransition(
-            position: Tween(begin: const Offset(0, 1), end: Offset.zero)
-                .animate(
-                    CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
+            position: Tween(
+              begin: const Offset(0, 1),
+              end: Offset.zero,
+            ).animate(
+                CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
             child: child,
           ),
         ),

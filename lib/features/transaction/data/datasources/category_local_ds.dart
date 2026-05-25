@@ -18,7 +18,6 @@ class CategoryLocalDataSource {
 
   Future<void> delete(String id) => _box.delete(id);
 
-  /// Seed kategori default saat install pertama
   Future<void> seedDefaults() async {
     if (_box.isNotEmpty) return;
     for (final cat in DefaultCategories.all) {
@@ -26,5 +25,11 @@ class CategoryLocalDataSource {
     }
   }
 
-  Stream<List<Category>> watchAll() => _box.watch().map((_) => getAll());
+  /// FIX: yield nilai awal dulu sebelum listen perubahan
+  Stream<List<Category>> watchAll() async* {
+    yield getAll(); // emit langsung nilai saat ini
+    await for (final _ in _box.watch()) {
+      yield getAll();
+    }
+  }
 }
